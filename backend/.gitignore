@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+.env.staging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+uploads/
+coverage/
+.nyc_output/
+.cache/
+.DS_Store
+Thumbs.db
