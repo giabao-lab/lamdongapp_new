@@ -31,12 +31,12 @@ export const authenticate = async (
       // In a real app, you would fetch user from database
       // For now, we'll use the decoded token data
       req.user = {
-        id: decoded.id,
+        id: decoded.userId || decoded.id, // Support both userId and id
         email: decoded.email,
         name: decoded.name,
         phone: decoded.phone,
         address: decoded.address,
-        role: decoded.role,
+        role: decoded.role || 'user', // Default role
         created_at: decoded.created_at,
         updated_at: decoded.updated_at
       };

@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useCart } from "@/lib/cart-context"
 import { useAuth } from "@/lib/auth-context"
+import { ordersService, CreateOrderRequest } from "@/lib/orders-service"
 import { Loader2 } from "lucide-react"
 
 export default function CheckoutPage() {
@@ -47,49 +48,57 @@ export default function CheckoutPage() {
     setError("")
     setIsSubmitting(true)
 
-    // Validate required fields
-    const requiredFields = ["name", "email", "phone", "address", "city", "district", "ward"]
-    const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
+    try {
+      // Validate required fields
+      const requiredFields = ["name", "email", "phone", "address", "city", "district", "ward"]
+      const missingFields = requiredFields.filter((field) => !formData[field as keyof typeof formData])
 
-    if (missingFields.length > 0) {
-      setError("Vui lòng điền đầy đủ thông tin giao hàng")
+      if (missingFields.length > 0) {
+        setError("Vui lòng điền đầy đủ thông tin giao hàng")
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!authState.user?.id) {
+        setError("Vui lòng đăng nhập để đặt hàng")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Prepare order data
+      const orderData: CreateOrderRequest = {
+        user_id: authState.user.id,
+        items: cartState.items.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.product.price
+        })),
+        shipping_address: {
+          fullName: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          address: formData.address,
+          city: formData.city,
+          district: formData.district,
+          ward: formData.ward
+        },
+        payment_method: formData.paymentMethod as "cod" | "bank_transfer"
+      }
+
+      // Create order via API
+      const order = await ordersService.createOrder(orderData)
+
+      // Clear cart
+      clearCart()
+
+      // Redirect to success page
+      router.push(`/checkout/success?orderId=${order.id}`)
+    } catch (err) {
+      console.error("Order creation failed:", err)
+      setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi tạo đơn hàng")
+    } finally {
       setIsSubmitting(false)
-      return
     }
-
-    // Simulate order processing
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    // Create mock order
-    const order = {
-      id: `ORDER_${Date.now()}`,
-      userId: authState.user?.id || "guest",
-      items: cartState.items,
-      total: cartState.total,
-      status: "pending" as const,
-      shippingAddress: {
-        name: formData.name,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        district: formData.district,
-        ward: formData.ward,
-      },
-      paymentMethod: formData.paymentMethod as "cod" | "bank_transfer",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    // Save order to localStorage (in real app, this would be sent to API)
-    const existingOrders = JSON.parse(localStorage.getItem("user_orders") || "[]")
-    existingOrders.push(order)
-    localStorage.setItem("user_orders", JSON.stringify(existingOrders))
-
-    // Clear cart
-    clearCart()
-
-    // Redirect to success page
-    router.push(`/checkout/success?orderId=${order.id}`)
   }
 
   if (cartState.items.length === 0) {
@@ -238,7 +247,7 @@ export default function CheckoutPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     {cartState.items.map((item) => (
-                      <div key={item.productId} className="flex justify-between items-center">
+                      <div key={item.product_id} className="flex justify-between items-center">
                         <div className="flex-1">
                           <h4 className="font-medium line-clamp-1">{item.product.name}</h4>
                           <p className="text-sm text-muted-foreground">Số lượng: {item.quantity}</p>

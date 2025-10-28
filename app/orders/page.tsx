@@ -1,98 +1,79 @@
 "use client"
 
 import { useAuth } from "@/lib/auth-context"
+import { ordersService } from "@/lib/orders-service"
+import { Order } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { Package, Search, Filter, Calendar, MapPin, CreditCard } from "lucide-react"
-import { useState } from "react"
-
-// Mock orders data to replace undefined orders from cart context
-const mockOrders = [
-  {
-    id: "ORD-001",
-    status: "delivered",
-    total: 850000,
-    createdAt: "2024-01-15T10:30:00Z",
-    customerInfo: {
-      name: "Nguyễn Văn A",
-      email: "customer@example.com",
-      phone: "0901234567",
-      address: "123 Đường ABC, Quận 1, TP.HCM",
-    },
-    paymentMethod: "cod",
-    items: [
-      {
-        name: "Cà phê Arabica Đà Lạt",
-        price: 350000,
-        quantity: 2,
-        image: "/vietnamese-arabica-coffee-beans-dalat.jpg",
-      },
-      {
-        name: "Trà atiso Đà Lạt",
-        price: 150000,
-        quantity: 1,
-        image: "/artichoke-tea-dalat-premium.jpg",
-      },
-    ],
-  },
-  {
-    id: "ORD-002",
-    status: "shipped",
-    total: 1200000,
-    createdAt: "2024-01-20T14:15:00Z",
-    customerInfo: {
-      name: "Admin User",
-      email: "admin@example.com",
-      phone: "0987654321",
-      address: "456 Đường XYZ, Quận 3, TP.HCM",
-    },
-    paymentMethod: "bank_transfer",
-    items: [
-      {
-        name: "Rượu vang Đà Lạt",
-        price: 600000,
-        quantity: 2,
-        image: "/dalat-red-wine-bottle.jpg",
-      },
-    ],
-  },
-  {
-    id: "ORD-003",
-    status: "processing",
-    total: 450000,
-    createdAt: "2024-01-25T09:45:00Z",
-    customerInfo: {
-      name: "Nguyễn Văn A",
-      email: "customer@example.com",
-      phone: "0901234567",
-      address: "123 Đường ABC, Quận 1, TP.HCM",
-    },
-    paymentMethod: "cod",
-    items: [
-      {
-        name: "Dâu tây Đà Lạt",
-        price: 150000,
-        quantity: 3,
-        image: "/fresh-dalat-strawberries.jpg",
-      },
-    ],
-  },
-]
+import { Package, Search, Filter, Calendar, MapPin, CreditCard, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
 
 export default function OrdersPage() {
-  const { user } = useAuth()
+  const { state: authState } = useAuth()
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
 
-  const userOrders = (mockOrders || []).filter((order) => order.customerInfo.email === user?.email)
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!authState.user?.id) return
 
-  const filteredOrders = userOrders.filter((order) => {
-    const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.items.some((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await ordersService.getUserOrders(authState.user.id)
+        setOrders(response.orders)
+      } catch (err) {
+        console.error("Failed to fetch orders:", err)
+        setError(err instanceof Error ? err.message : "Không thể tải danh sách đơn hàng")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrders()
+  }, [authState.user?.id])
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) {
+      return
+    }
+
+    try {
+      setCancellingOrderId(orderId)
+      await ordersService.cancelOrder(orderId)
+      
+      // Update the orders list
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: 'cancelled' }
+            : order
+        )
+      )
+      
+      alert("Đơn hàng đã được hủy thành công!")
+    } catch (err) {
+      console.error("Failed to cancel order:", err)
+      alert(err instanceof Error ? err.message : "Không thể hủy đơn hàng")
+    } finally {
+      setCancellingOrderId(null)
+    }
+  }
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch = 
+      order.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.items && order.items.some((item: any) => 
+        item.product?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      ))
     const matchesStatus = statusFilter === "all" || order.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -115,20 +96,7 @@ export default function OrdersPage() {
   }
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Chờ xử lý"
-      case "processing":
-        return "Đang xử lý"
-      case "shipped":
-        return "Đã gửi hàng"
-      case "delivered":
-        return "Đã giao hàng"
-      case "cancelled":
-        return "Đã hủy"
-      default:
-        return status
-    }
+    return ordersService.getOrderStatusText(status)
   }
 
   const statusOptions = [
@@ -179,8 +147,23 @@ export default function OrdersPage() {
           </CardContent>
         </Card>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Đang tải đơn hàng...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Alert className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         {/* Orders List */}
-        {filteredOrders.length === 0 ? (
+        {!loading && !error && filteredOrders.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -198,108 +181,136 @@ export default function OrdersPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
-            {filteredOrders.map((order) => (
-              <Card key={order.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">Đơn hàng #{order.id}</CardTitle>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(order.createdAt).toLocaleDateString("vi-VN", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                    <Badge variant={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Order Items */}
-                  <div className="space-y-3">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-                        <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
-                          <img
-                            src={item.image || "/placeholder.svg?height=64&width=64"}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{item.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Số lượng: {item.quantity} | Đơn giá: {item.price.toLocaleString("vi-VN")}₫
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{(item.price * item.quantity).toLocaleString("vi-VN")}₫</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+          !loading && !error && (
+            <div className="space-y-6">
+              {filteredOrders.map((order) => {
+                const shippingAddress = order.shipping_address ? 
+                  (typeof order.shipping_address === 'string' ? 
+                    JSON.parse(order.shipping_address) : 
+                    order.shipping_address) : null
 
-                  {/* Order Info */}
-                  <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
-                    <div className="space-y-2">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        Địa chỉ giao hàng
-                      </h4>
-                      <div className="text-sm text-muted-foreground">
-                        <p>{order.customerInfo.name}</p>
-                        <p>{order.customerInfo.phone}</p>
-                        <p>{order.customerInfo.address}</p>
+                return (
+                  <Card key={order.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg">Đơn hàng #{order.id}</CardTitle>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {new Date(order.created_at || '').toLocaleDateString("vi-VN", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" />
-                        Thông tin thanh toán
-                      </h4>
-                      <div className="text-sm text-muted-foreground">
-                        <p>
-                          Phương thức: {order.paymentMethod === "cod" ? "Thanh toán khi nhận hàng" : "Chuyển khoản"}
-                        </p>
-                        <p className="font-medium text-foreground">Tổng cộng: {order.total.toLocaleString("vi-VN")}₫</p>
-                      </div>
-                    </div>
-                  </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Order Items */}
+                      {order.items && order.items.length > 0 && (
+                        <div className="space-y-3">
+                          {order.items.map((item: any, index: number) => (
+                            <div key={index} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+                              <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
+                                <img
+                                  src={item.product?.image || "/placeholder.svg"}
+                                  alt={item.product?.name || "Sản phẩm"}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium">{item.product?.name || "Sản phẩm"}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Số lượng: {item.quantity} | Đơn giá: {Number(item.price).toLocaleString("vi-VN")}₫
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium">{(Number(item.price) * item.quantity).toLocaleString("vi-VN")}₫</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                  {/* Actions */}
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Chi tiết đơn hàng
-                      </Button>
-                      {order.status === "delivered" && (
-                        <Button variant="outline" size="sm">
-                          Đánh giá sản phẩm
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      {order.status === "pending" && (
-                        <Button variant="destructive" size="sm">
-                          Hủy đơn hàng
-                        </Button>
-                      )}
-                      {(order.status === "shipped" || order.status === "delivered") && (
-                        <Button size="sm">Mua lại</Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      {/* Order Info */}
+                      <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
+                        <div className="space-y-2">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <MapPin className="w-4 h-4" />
+                            Địa chỉ giao hàng
+                          </h4>
+                          {shippingAddress && (
+                            <div className="text-sm text-muted-foreground">
+                              <p>{shippingAddress.fullName}</p>
+                              <p>{shippingAddress.phone}</p>
+                              <p>{shippingAddress.address}</p>
+                              <p>{shippingAddress.ward}, {shippingAddress.district}, {shippingAddress.city}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <CreditCard className="w-4 h-4" />
+                            Thông tin thanh toán
+                          </h4>
+                          <div className="text-sm text-muted-foreground">
+                            <p>
+                              Phương thức: {order.payment_method === "cod" ? "Thanh toán khi nhận hàng" : "Chuyển khoản"}
+                            </p>
+                            <p className="font-medium text-foreground">
+                              Tổng cộng: {Number(order.total).toLocaleString("vi-VN")}₫
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex justify-between items-center pt-4 border-t">
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            Chi tiết đơn hàng
+                          </Button>
+                          {order.status === "delivered" && (
+                            <Button variant="outline" size="sm">
+                              Đánh giá sản phẩm
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          {order.status === "pending" && (
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleCancelOrder(order.id)}
+                              disabled={cancellingOrderId === order.id}
+                            >
+                              {cancellingOrderId === order.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                  Đang hủy...
+                                </>
+                              ) : (
+                                "Hủy đơn hàng"
+                              )}
+                            </Button>
+                          )}
+                          {(order.status === "shipped" || order.status === "delivered") && (
+                            <Button size="sm">Mua lại</Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )
         )}
       </div>
     </ProtectedRoute>

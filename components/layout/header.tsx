@@ -4,15 +4,7 @@ import Link from "next/link"
 import { Search, ShoppingCart, User, Menu, X, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useCart } from "@/lib/cart-context"
 
@@ -21,6 +13,23 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("")
   const { state, logout } = useAuth()
   const { state: cartState } = useCart()
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [isMenuOpen])
 
   const navigation = [
     { name: "Trang chủ", href: "/" },
@@ -82,33 +91,60 @@ export function Header() {
             </Link>
 
             {state.isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>{state.user?.name || "Tài khoản"}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">Hồ sơ cá nhân</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/orders">Đơn hàng của tôi</Link>
-                  </DropdownMenuItem>
-                  {state.user?.role === "admin" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin">Quản trị</Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Đăng xuất
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="user-dropdown" ref={dropdownRef}>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="relative"
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+                
+                {/* Simple dropdown menu */}
+                {isMenuOpen && (
+                  <div className="dropdown-content">
+                    <div className="dropdown-item">
+                      <strong>{state.user?.name || "Tài khoản"}</strong><br />
+                      <small className="text-gray-500">{state.user?.email}</small>
+                    </div>
+                    
+                    <Link 
+                      href="/profile" 
+                      className="dropdown-item"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Hồ sơ cá nhân
+                    </Link>
+                    <Link 
+                      href="/orders" 
+                      className="dropdown-item"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Đơn hàng của tôi
+                    </Link>
+                    {state.user?.role === "admin" && (
+                      <Link 
+                        href="/admin" 
+                        className="dropdown-item"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Quản trị
+                      </Link>
+                    )}
+                    <button 
+                      onClick={() => {
+                        logout()
+                        setIsMenuOpen(false)
+                      }}
+                      className="dropdown-item logout w-full text-left"
+                    >
+                      <LogOut className="mr-2 h-4 w-4 inline" />
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link href="/auth/login">
                 <Button variant="ghost" size="icon">

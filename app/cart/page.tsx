@@ -43,7 +43,7 @@ export default function CartPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             {state.items.map((item) => (
-              <Card key={item.productId}>
+              <Card key={item.product_id}>
                 <CardContent className="p-6">
                   <div className="flex gap-4">
                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
@@ -65,8 +65,13 @@ export default function CartPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeItem(item.productId)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeItem(item.product_id);
+                          }}
                           className="text-muted-foreground hover:text-destructive"
+                          type="button"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -77,9 +82,14 @@ export default function CartPage() {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              updateQuantity(item.product_id, item.quantity - 1);
+                            }}
                             disabled={item.quantity <= 1}
                             className="h-8 w-8"
+                            type="button"
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -87,8 +97,13 @@ export default function CartPage() {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              updateQuantity(item.product_id, item.quantity + 1);
+                            }}
                             className="h-8 w-8"
+                            type="button"
                           >
                             <Plus className="h-3 w-3" />
                           </Button>

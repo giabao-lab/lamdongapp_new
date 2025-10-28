@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Package, ShoppingCart, Users, TrendingUp } from "lucide-react"
+import Link from "next/link"
 
 const mockOrders = [
   {
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
   const recentOrders = mockOrders.slice(-5).reverse()
 
   return (
-    <ProtectedRoute adminOnly>
+    <ProtectedRoute requireAdmin>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-primary mb-2">Bảng điều khiển quản trị</h1>
@@ -104,6 +105,9 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalUsers}</div>
               <p className="text-xs text-muted-foreground">Người dùng đã đăng ký</p>
+              <Link href="/admin/users" className="text-xs text-blue-600 hover:underline mt-1 block">
+                Xem chi tiết →
+              </Link>
             </CardContent>
           </Card>
 

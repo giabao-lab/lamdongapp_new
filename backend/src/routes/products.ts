@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { query, param } from 'express-validator';
 import database from '../config/database';
 import { handleValidationErrors } from '../middleware/validation';
@@ -18,7 +18,7 @@ router.get('/', [
   query('sort').optional().isIn(['name', 'price', 'rating', 'created_at']).withMessage('Invalid sort field'),
   query('order').optional().isIn(['asc', 'desc']).withMessage('Order must be asc or desc'),
   // handleValidationErrors
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const {
       page = 1,
@@ -115,7 +115,7 @@ router.get('/', [
 router.get('/:id', [
   param('id').isUUID().withMessage('Product ID must be a valid UUID'),
   // handleValidationErrors
-], async (req, res) => {
+], async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 

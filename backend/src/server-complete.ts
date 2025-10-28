@@ -10,6 +10,7 @@ import database from './config/database';
 // Import fixed routes
 import authRoutes from './routes/auth-fixed';
 import productRoutes from './routes/products-fixed';
+import orderRoutes from './routes/orders';
 
 const app = express();
 
@@ -18,7 +19,11 @@ app.use(helmet());
 
 // CORS configuration
 app.use(cors({
-  origin: config.cors.origin,
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    config.cors.origin
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -80,6 +85,7 @@ app.get('/api/v1/test', (req, res) => {
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/orders', orderRoutes);
 
 // 404 handler
 app.use((req, res) => {

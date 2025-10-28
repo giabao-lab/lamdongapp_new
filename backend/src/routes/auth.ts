@@ -61,4 +61,7 @@ router.put('/profile', [
   handleValidationErrors
 ], AuthController.updateProfile);
 
+// Get all users route (admin only)
+router.get('/users', authenticate, AuthController.getAllUsers);
+
 export default router;

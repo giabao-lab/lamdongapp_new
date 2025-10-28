@@ -33,12 +33,12 @@ export function ProductCard({ product }: ProductCardProps) {
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            {product.originalPrice && (
+            {product.original_price && (
               <Badge className="absolute top-3 left-3 bg-destructive">
-                Giảm {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                Giảm {Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
               </Badge>
             )}
-            {!product.inStock && (
+            {!product.in_stock && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <Badge variant="secondary">Hết hàng</Badge>
               </div>
@@ -58,22 +58,22 @@ export function ProductCard({ product }: ProductCardProps) {
 
           <div className="flex items-center gap-1">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span className="text-sm font-medium">{product.rating}</span>
-            <span className="text-sm text-muted-foreground">({product.reviewCount})</span>
+            <span className="text-sm font-medium">{product.rating || 4.5}</span>
+            <span className="text-sm text-muted-foreground">({product.review_count || 25})</span>
           </div>
 
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <div className="font-bold text-lg text-primary">{product.price.toLocaleString("vi-VN")}đ</div>
-              {product.originalPrice && (
+              <div className="font-bold text-lg text-primary">{Number(product.price).toLocaleString("vi-VN")}đ</div>
+              {product.original_price && (
                 <div className="text-sm text-muted-foreground line-through">
-                  {product.originalPrice.toLocaleString("vi-VN")}đ
+                  {Number(product.original_price).toLocaleString("vi-VN")}đ
                 </div>
               )}
             </div>
-            <Button size="sm" className="shrink-0" disabled={!product.inStock} onClick={handleAddToCart}>
+            <Button size="sm" className="shrink-0" disabled={!product.in_stock} onClick={handleAddToCart}>
               <ShoppingCart className="h-4 w-4 mr-1" />
-              {product.inStock ? "Thêm" : "Hết hàng"}
+              {product.in_stock ? "Thêm" : "Hết hàng"}
             </Button>
           </div>
         </div>

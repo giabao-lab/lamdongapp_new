@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -42,23 +42,54 @@ const mockOrders = [
 ]
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth()
+  const { state, updateProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    address: user?.address || "",
+    name: state.user?.name || "",
+    email: state.user?.email || "",
+    phone: state.user?.phone || "",
+    address: state.user?.address || "",
   })
 
-  const handleSave = () => {
-    if (user) {
-      updateUser({ ...user, ...formData })
-      setIsEditing(false)
+  // Sync formData with user data when user changes
+  useEffect(() => {
+    if (state.user) {
+      setFormData({
+        name: state.user.name || "",
+        email: state.user.email || "",
+        phone: state.user.phone || "",
+        address: state.user.address || "",
+      })
+    }
+  }, [state.user])
+
+  const handleSave = async () => {
+    setIsLoading(true)
+    setMessage(null)
+    
+    try {
+      const result = await updateProfile({
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+      })
+      
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' })
+        setIsEditing(false)
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Cập nhật thất bại' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật' })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const userOrders = mockOrders?.filter((order) => order.customerInfo.email === user?.email) || []
+  const userOrders = mockOrders?.filter((order) => order.customerInfo.email === state.user?.email) || []
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -123,6 +154,16 @@ export default function ProfilePage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {message && (
+                  <div className={`p-3 rounded border ${
+                    message.type === 'success' 
+                      ? 'bg-green-50 border-green-200 text-green-800' 
+                      : 'bg-red-50 border-red-200 text-red-800'
+                  }`}>
+                    {message.text}
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Họ và tên</Label>
@@ -135,7 +176,7 @@ export default function ProfilePage() {
                     ) : (
                       <div className="flex items-center gap-2 p-2 border rounded">
                         <User className="w-4 h-4 text-muted-foreground" />
-                        <span>{user?.name}</span>
+                        <span>{state.user?.name}</span>
                       </div>
                     )}
                   </div>
@@ -152,7 +193,7 @@ export default function ProfilePage() {
                     ) : (
                       <div className="flex items-center gap-2 p-2 border rounded">
                         <Mail className="w-4 h-4 text-muted-foreground" />
-                        <span>{user?.email}</span>
+                        <span>{state.user?.email}</span>
                       </div>
                     )}
                   </div>
@@ -169,7 +210,7 @@ export default function ProfilePage() {
                     ) : (
                       <div className="flex items-center gap-2 p-2 border rounded">
                         <Phone className="w-4 h-4 text-muted-foreground" />
-                        <span>{user?.phone || "Chưa cung cấp"}</span>
+                        <span>{state.user?.phone || "Chưa cung cấp"}</span>
                       </div>
                     )}
                   </div>
@@ -186,7 +227,7 @@ export default function ProfilePage() {
                     ) : (
                       <div className="flex items-center gap-2 p-2 border rounded">
                         <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span>{user?.address || "Chưa cung cấp"}</span>
+                        <span>{state.user?.address || "Chưa cung cấp"}</span>
                       </div>
                     )}
                   </div>
@@ -194,8 +235,10 @@ export default function ProfilePage() {
 
                 {isEditing && (
                   <div className="flex gap-2 pt-4">
-                    <Button onClick={handleSave}>Lưu thay đổi</Button>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    <Button onClick={handleSave} disabled={isLoading}>
+                      {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isLoading}>
                       Hủy
                     </Button>
                   </div>

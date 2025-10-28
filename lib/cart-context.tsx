@@ -40,7 +40,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
     case "ADD_ITEM": {
       const { product, quantity = 1 } = action.payload
-      const existingItemIndex = state.items.findIndex((item) => item.productId === product.id)
+      const existingItemIndex = state.items.findIndex((item) => item.product_id === product.id)
 
       let newItems: CartItem[]
       if (existingItemIndex >= 0) {
@@ -48,7 +48,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           index === existingItemIndex ? { ...item, quantity: item.quantity + quantity } : item,
         )
       } else {
-        newItems = [...state.items, { productId: product.id, quantity, product }]
+        newItems = [...state.items, { product_id: product.id, quantity, product }]
       }
 
       return {
@@ -59,7 +59,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
     case "REMOVE_ITEM": {
       const productId = action.payload
-      const newItems = state.items.filter((item) => item.productId !== productId)
+      const newItems = state.items.filter((item) => item.product_id !== productId)
       return {
         items: newItems,
         total: calculateTotal(newItems),
@@ -68,8 +68,9 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
     case "UPDATE_QUANTITY": {
       const { productId, quantity } = action.payload
+      
       if (quantity <= 0) {
-        const newItems = state.items.filter((item) => item.productId !== productId)
+        const newItems = state.items.filter((item) => item.product_id !== productId)
         return {
           items: newItems,
           total: calculateTotal(newItems),
@@ -77,7 +78,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         }
       }
 
-      const newItems = state.items.map((item) => (item.productId === productId ? { ...item, quantity } : item))
+      const newItems = state.items.map((item) => {
+        if (item.product_id === productId) {
+          return { ...item, quantity };
+        }
+        return item;
+      });
+      
       return {
         items: newItems,
         total: calculateTotal(newItems),
@@ -105,20 +112,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Load cart from localStorage on mount
-    const savedCart = localStorage.getItem("cart_items")
-    if (savedCart) {
+    const loadCart = () => {
       try {
-        const items = JSON.parse(savedCart)
-        dispatch({ type: "LOAD_CART", payload: items })
+        const savedCart = localStorage.getItem("cart_items")
+        if (savedCart) {
+          const items = JSON.parse(savedCart)
+          // Validate items structure
+          if (Array.isArray(items)) {
+            dispatch({ type: "LOAD_CART", payload: items })
+          }
+        }
       } catch (error) {
         console.error("Error loading cart from localStorage:", error)
+        // Clear corrupted data
+        localStorage.removeItem("cart_items")
       }
     }
+    
+    loadCart()
   }, [])
 
   useEffect(() => {
     // Save cart to localStorage whenever it changes
-    localStorage.setItem("cart_items", JSON.stringify(state.items))
+    try {
+      localStorage.setItem("cart_items", JSON.stringify(state.items))
+    } catch (error) {
+      console.error("Error saving cart to localStorage:", error)
+    }
   }, [state.items])
 
   const addItem = (product: Product, quantity = 1) => {

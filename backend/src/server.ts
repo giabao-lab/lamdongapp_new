@@ -12,8 +12,8 @@ import { errorHandler, notFound } from './middleware/errorHandler';
 // Import routes
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
+import orderRoutes from './routes/orders';
 // import userRoutes from './routes/users';
-// import orderRoutes from './routes/orders';
 // import cartRoutes from './routes/cart';
 
 const app = express();
@@ -85,8 +85,8 @@ app.use('/api/v1', (req, res) => {
 // Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/orders', orderRoutes);
 // app.use('/api/v1/users', userRoutes);
-// app.use('/api/v1/orders', orderRoutes);
 // app.use('/api/v1/cart', cartRoutes);
 
 // Error handling

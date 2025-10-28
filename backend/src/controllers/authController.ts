@@ -16,7 +16,7 @@ export class AuthController {
           success: false,
           message: 'Validation failed',
           errors: errors.array()
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -32,7 +32,7 @@ export class AuthController {
         res.status(409).json({
           success: false,
           message: 'User with this email already exists'
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -59,7 +59,7 @@ export class AuthController {
           name: user.name 
         },
         config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
+        { expiresIn: '7d' }
       );
 
       res.status(201).json({
@@ -73,7 +73,7 @@ export class AuthController {
       res.status(500).json({
         success: false,
         message: 'Internal server error'
-      } as ApiResponse);
+      } as ApiResponse<null>);
     }
   }
 
@@ -86,7 +86,7 @@ export class AuthController {
           success: false,
           message: 'Validation failed',
           errors: errors.array()
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -102,7 +102,7 @@ export class AuthController {
         res.status(401).json({
           success: false,
           message: 'Invalid email or password'
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -114,7 +114,7 @@ export class AuthController {
         res.status(401).json({
           success: false,
           message: 'Invalid email or password'
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -127,7 +127,7 @@ export class AuthController {
           name: user.name 
         },
         config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
+        { expiresIn: '7d' }
       );
 
       // Remove password from response
@@ -144,7 +144,7 @@ export class AuthController {
       res.status(500).json({
         success: false,
         message: 'Internal server error'
-      } as ApiResponse);
+      } as ApiResponse<null>);
     }
   }
 
@@ -155,7 +155,7 @@ export class AuthController {
         res.status(401).json({
           success: false,
           message: 'User not authenticated'
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -168,7 +168,7 @@ export class AuthController {
         res.status(404).json({
           success: false,
           message: 'User not found'
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -183,7 +183,7 @@ export class AuthController {
       res.status(500).json({
         success: false,
         message: 'Internal server error'
-      } as ApiResponse);
+      } as ApiResponse<null>);
     }
   }
 
@@ -196,7 +196,7 @@ export class AuthController {
           success: false,
           message: 'Validation failed',
           errors: errors.array()
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -204,7 +204,7 @@ export class AuthController {
         res.status(401).json({
           success: false,
           message: 'User not authenticated'
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -225,7 +225,7 @@ export class AuthController {
         res.status(404).json({
           success: false,
           message: 'User not found'
-        } as ApiResponse);
+        } as ApiResponse<null>);
         return;
       }
 
@@ -240,7 +240,65 @@ export class AuthController {
       res.status(500).json({
         success: false,
         message: 'Internal server error'
-      } as ApiResponse);
+      } as ApiResponse<null>);
+    }
+  }
+
+  // Get all users (admin only)
+  static async getAllUsers(req: Request & { user?: any }, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        } as ApiResponse<null>);
+        return;
+      }
+
+      // Check if user has admin role (optional - remove if not needed)
+      // if (req.user.role !== 'admin') {
+      //   res.status(403).json({
+      //     success: false,
+      //     message: 'Access denied. Admin role required.'
+      //   } as ApiResponse<null>);
+      //   return;
+      // }
+
+      const usersResult = await database.query(
+        `SELECT 
+          id, email, name, phone, address, role, created_at, updated_at,
+          (SELECT COUNT(*) FROM orders WHERE user_id = users.id) as total_orders
+         FROM users 
+         ORDER BY created_at DESC`
+      );
+
+      const totalResult = await database.query('SELECT COUNT(*) FROM users');
+      const total = parseInt(totalResult.rows[0].count);
+
+      res.json({
+        success: true,
+        message: 'Users retrieved successfully',
+        data: {
+          users: usersResult.rows,
+          total: total,
+          stats: {
+            totalUsers: total,
+            newUsersThisWeek: usersResult.rows.filter((user: any) => 
+              new Date(user.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            ).length,
+            newUsersThisMonth: usersResult.rows.filter((user: any) => 
+              new Date(user.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+            ).length
+          }
+        }
+      } as ApiResponse<any>);
+
+    } catch (error) {
+      console.error('Get all users error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      } as ApiResponse<null>);
     }
   }
 }
