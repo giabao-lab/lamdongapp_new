@@ -5,10 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/lib/auth-context';
 import { ProtectedRoute } from '@/components/auth/protected-route';
-import { Search, Users, Calendar, ShoppingCart } from 'lucide-react';
+import { Search, Users, Calendar, ShoppingCart, Eye, Trash2, Loader2, User, Mail, Phone, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { adminService } from '@/lib/admin-service';
 
 interface UserData {
   id: string;
@@ -44,6 +48,19 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // View user detail state
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  
+  // Delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  
+  // Success message
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     // Chỉ fetch data khi đã có auth state và user đã đăng nhập
@@ -125,6 +142,51 @@ export default function UsersPage() {
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Open view dialog
+  const openViewDialog = (user: UserData) => {
+    setSelectedUser(user);
+    setViewDialogOpen(true);
+  };
+
+  // Open delete dialog
+  const openDeleteDialog = (user: UserData) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+    setDeleteError('');
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setDeleteLoading(true);
+      setDeleteError('');
+
+      await adminService.deleteUser(Number(userToDelete.id));
+
+      // Remove user from list
+      setUsers(users.filter((u) => u.id !== userToDelete.id));
+      setStats({
+        ...stats,
+        totalUsers: stats.totalUsers - 1
+      });
+
+      // Show success message
+      setSuccessMessage(`Đã xóa người dùng "${userToDelete.name}" thành công`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+
+      // Close dialog
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    } catch (error: any) {
+      console.error('Delete user error:', error);
+      setDeleteError(error.message || 'Không thể xóa người dùng. Vui lòng thử lại.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('vi-VN', {
@@ -277,6 +339,13 @@ export default function UsersPage() {
         </Button>
       </div>
 
+      {/* Success Message */}
+      {successMessage && (
+        <Alert className="bg-green-50 text-green-900 border-green-200">
+          <AlertDescription>{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Thống kê */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
@@ -344,11 +413,11 @@ export default function UsersPage() {
                 className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex justify-between items-start">
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{userData.name}</h3>
                       <Badge variant={userData.role === 'admin' ? 'default' : 'secondary'}>
-                        {userData.role}
+                        {userData.role === 'admin' ? 'Quản trị viên' : 'Khách hàng'}
                       </Badge>
                     </div>
                     
@@ -360,13 +429,33 @@ export default function UsersPage() {
 
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>Đăng ký: {formatDate(userData.created_at)}</span>
-                      <span>Cập nhật: {formatDate(userData.updated_at)}</span>
+                      <span className="flex items-center gap-1">
+                        <ShoppingCart className="h-3 w-3" />
+                        {userData.total_orders} đơn hàng
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm">
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>{userData.total_orders} đơn hàng</span>
+                  {/* Action buttons */}
+                  <div className="flex items-start gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openViewDialog(userData)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Xem
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDeleteDialog(userData)}
+                      className="text-destructive hover:text-destructive"
+                      disabled={userData.role === 'admin' && userData.email === state.user?.email}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Xóa
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -380,6 +469,133 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* View User Detail Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Chi tiết người dùng</DialogTitle>
+            <DialogDescription>
+              Thông tin chi tiết về người dùng
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xl">{selectedUser.name}</h3>
+                  <Badge variant={selectedUser.role === 'admin' ? 'default' : 'secondary'}>
+                    {selectedUser.role === 'admin' ? 'Quản trị viên' : 'Khách hàng'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </label>
+                    <p className="mt-1">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Số điện thoại
+                    </label>
+                    <p className="mt-1">{selectedUser.phone || "Chưa cập nhật"}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Địa chỉ
+                  </label>
+                  <p className="mt-1">{selectedUser.address || "Chưa cập nhật"}</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Ngày tham gia
+                    </label>
+                    <p className="mt-1">{formatDate(selectedUser.created_at)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Cập nhật lần cuối
+                    </label>
+                    <p className="mt-1">{formatDate(selectedUser.updated_at)}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    Tổng đơn hàng
+                  </label>
+                  <p className="mt-1 text-2xl font-bold text-primary">{selectedUser.total_orders}</p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">ID người dùng</label>
+                  <p className="mt-1 font-mono text-sm">{selectedUser.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa người dùng</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa người dùng <strong>{userToDelete?.name}</strong>?
+              <br />
+              <br />
+              <span className="text-destructive font-medium">
+                ⚠️ Hành động này không thể hoàn tác!
+              </span>
+              <br />
+              Tất cả dữ liệu liên quan đến người dùng này sẽ bị xóa vĩnh viễn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {deleteError && (
+            <Alert variant="destructive">
+              <AlertDescription>{deleteError}</AlertDescription>
+            </Alert>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={deleteLoading}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleteLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xóa...
+                </>
+              ) : (
+                "Xóa người dùng"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </ProtectedRoute>
   );

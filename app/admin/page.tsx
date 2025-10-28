@@ -4,9 +4,12 @@ import { useAuth } from "@/lib/auth-context"
 import { products } from "@/lib/mock-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ProtectedRoute } from "@/components/auth/protected-route"
-import { Package, ShoppingCart, Users, TrendingUp } from "lucide-react"
+import { Package, ShoppingCart, Users, TrendingUp, Settings, FileText } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import { adminService } from "@/lib/admin-service"
 
 const mockOrders = [
   {
@@ -55,11 +58,28 @@ const mockOrders = [
 
 export default function AdminDashboard() {
   const { state } = useAuth()
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const stats = await adminService.getUserStats()
+        setTotalUsers(stats.totalUsers)
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserStats()
+  }, [])
 
   const stats = {
     totalProducts: products.length,
     totalOrders: mockOrders.length,
-    totalUsers: 156, // Mock data
+    totalUsers: totalUsers,
     totalRevenue: mockOrders.reduce((sum, order) => sum + order.total, 0),
   }
 
@@ -71,6 +91,37 @@ export default function AdminDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-primary mb-2">Bảng điều khiển quản trị</h1>
           <p className="text-muted-foreground">Chào mừng trở lại, {state.user?.name}</p>
+        </div>
+
+        {/* Quick Actions / Navigation */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Link href="/admin/products">
+            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center gap-2">
+              <Package className="h-6 w-6" />
+              <span className="font-semibold">Quản lý sản phẩm</span>
+            </Button>
+          </Link>
+          
+          <Link href="/admin/orders">
+            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center gap-2">
+              <ShoppingCart className="h-6 w-6" />
+              <span className="font-semibold">Quản lý đơn hàng</span>
+            </Button>
+          </Link>
+          
+          <Link href="/admin/users">
+            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center gap-2">
+              <Users className="h-6 w-6" />
+              <span className="font-semibold">Quản lý người dùng</span>
+            </Button>
+          </Link>
+          
+          <Link href="/admin/system-status">
+            <Button variant="outline" className="w-full h-24 flex flex-col items-center justify-center gap-2">
+              <Settings className="h-6 w-6" />
+              <span className="font-semibold">Trạng thái hệ thống</span>
+            </Button>
+          </Link>
         </div>
 
         {/* Statistics Cards */}
@@ -103,7 +154,9 @@ export default function AdminDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : stats.totalUsers}
+              </div>
               <p className="text-xs text-muted-foreground">Người dùng đã đăng ký</p>
               <Link href="/admin/users" className="text-xs text-blue-600 hover:underline mt-1 block">
                 Xem chi tiết →

@@ -64,4 +64,7 @@ router.put('/profile', [
 // Get all users route (admin only)
 router.get('/users', authenticate, AuthController.getAllUsers);
 
+// Delete user route (admin only)
+router.delete('/users/:id', authenticate, AuthController.deleteUser);
+
 export default router;

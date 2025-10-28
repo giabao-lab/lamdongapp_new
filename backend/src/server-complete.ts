@@ -7,9 +7,9 @@ import path from 'path';
 import config from './config/config';
 import database from './config/database';
 
-// Import fixed routes
-import authRoutes from './routes/auth-fixed';
-import productRoutes from './routes/products-fixed';
+// Import routes
+import authRoutes from './routes/auth';
+import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 
 const app = express();

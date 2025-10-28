@@ -301,4 +301,66 @@ export class AuthController {
       } as ApiResponse<null>);
     }
   }
+
+  // Delete user
+  static async deleteUser(req: Request & { user?: any }, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        } as ApiResponse<null>);
+        return;
+      }
+
+      // Check if user has admin role
+      if (req.user.role !== 'admin') {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied. Admin role required.'
+        } as ApiResponse<null>);
+        return;
+      }
+
+      const userId = req.params.id;
+
+      // Prevent admin from deleting themselves
+      if (req.user.userId === parseInt(userId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Bạn không thể xóa tài khoản của chính mình'
+        } as ApiResponse<null>);
+        return;
+      }
+
+      // Check if user exists
+      const userExists = await database.query(
+        'SELECT id FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (userExists.rows.length === 0) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        } as ApiResponse<null>);
+        return;
+      }
+
+      // Delete user (cascade will delete related records)
+      await database.query('DELETE FROM users WHERE id = $1', [userId]);
+
+      res.json({
+        success: true,
+        message: 'User deleted successfully'
+      } as ApiResponse<null>);
+
+    } catch (error) {
+      console.error('Delete user error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      } as ApiResponse<null>);
+    }
+  }
 }

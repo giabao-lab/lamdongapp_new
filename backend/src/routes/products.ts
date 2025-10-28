@@ -147,4 +147,206 @@ router.get('/:id', [
   }
 });
 
+// Create product (admin only)
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const {
+      name,
+      description,
+      price,
+      original_price,
+      image,
+      images,
+      category,
+      stock_quantity,
+      origin,
+      weight,
+      tags,
+      ingredients
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !description || !price || !image || !category) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing required fields'
+      });
+      return;
+    }
+
+    const in_stock = stock_quantity > 0;
+
+    const query = `
+      INSERT INTO products (
+        name, description, price, original_price, image, images,
+        category, in_stock, stock_quantity, origin, weight, tags, ingredients
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *
+    `;
+
+    const values = [
+      name,
+      description,
+      price,
+      original_price || null,
+      image,
+      images || [image],
+      category,
+      in_stock,
+      stock_quantity || 0,
+      origin || 'Đà Lạt, Lâm Đồng',
+      weight || null,
+      tags || [],
+      ingredients || []
+    ];
+
+    const result = await database.query(query, values);
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Create product error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Update product (admin only)
+router.put('/:id', [
+  param('id').isUUID().withMessage('Product ID must be a valid UUID')
+], async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      description,
+      price,
+      original_price,
+      image,
+      images,
+      category,
+      stock_quantity,
+      origin,
+      weight,
+      tags,
+      ingredients
+    } = req.body;
+
+    // Check if product exists
+    const checkResult = await database.query('SELECT id FROM products WHERE id = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+      return;
+    }
+
+    const in_stock = stock_quantity > 0;
+
+    const query = `
+      UPDATE products SET
+        name = $1,
+        description = $2,
+        price = $3,
+        original_price = $4,
+        image = $5,
+        images = $6,
+        category = $7,
+        in_stock = $8,
+        stock_quantity = $9,
+        origin = $10,
+        weight = $11,
+        tags = $12,
+        ingredients = $13,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $14
+      RETURNING *
+    `;
+
+    const values = [
+      name,
+      description,
+      price,
+      original_price || null,
+      image,
+      images || [image],
+      category,
+      in_stock,
+      stock_quantity || 0,
+      origin || 'Đà Lạt, Lâm Đồng',
+      weight || null,
+      tags || [],
+      ingredients || [],
+      id
+    ];
+
+    const result = await database.query(query, values);
+
+    res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Update product error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Delete product (admin only)
+router.delete('/:id', [
+  param('id').isUUID().withMessage('Product ID must be a valid UUID')
+], async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Check if product exists
+    const checkResult = await database.query('SELECT id, name FROM products WHERE id = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+      return;
+    }
+
+    // Delete product
+    await database.query('DELETE FROM products WHERE id = $1', [id]);
+
+    res.json({
+      success: true,
+      message: 'Product deleted successfully',
+      data: { id, name: checkResult.rows[0].name }
+    });
+
+  } catch (error: any) {
+    console.error('Delete product error:', error);
+    
+    // Check for foreign key constraint violation
+    if (error.code === '23503') {
+      res.status(400).json({
+        success: false,
+        message: 'Cannot delete product. It is referenced in existing orders.'
+      });
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 export default router;
