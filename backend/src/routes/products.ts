@@ -6,6 +6,106 @@ import { ApiResponse, Product, ProductQuery } from '../types';
 
 const router = Router();
 
+/**
+ * @swagger
+ * /products:
+ *   get:
+ *     summary: Get all products with filtering, sorting, and pagination
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of items per page
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [coffee, tea, wine, fruits, preserves]
+ *         description: Filter by category
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in product name and description
+ *       - in: query
+ *         name: min_price
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Minimum price filter
+ *       - in: query
+ *         name: max_price
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Maximum price filter
+ *       - in: query
+ *         name: in_stock
+ *         schema:
+ *           type: boolean
+ *         description: Filter by stock availability
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [name, price, rating, created_at]
+ *           default: created_at
+ *         description: Sort field
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *     responses:
+ *       200:
+ *         description: Products retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Products retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 20
+ *                     total:
+ *                       type: integer
+ *                       example: 100
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *       500:
+ *         description: Internal server error
+ */
 // Get all products
 router.get('/', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
@@ -111,6 +211,40 @@ router.get('/', [
   }
 });
 
+/**
+ * @swagger
+ * /products/{id}:
+ *   get:
+ *     summary: Get a single product by ID
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Product ID
+ *     responses:
+ *       200:
+ *         description: Product retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Product retrieved successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Internal server error
+ */
 // Get single product
 router.get('/:id', [
   param('id').isUUID().withMessage('Product ID must be a valid UUID'),
@@ -147,6 +281,80 @@ router.get('/:id', [
   }
 });
 
+/**
+ * @swagger
+ * /products:
+ *   post:
+ *     summary: Create a new product (Admin only)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - description
+ *               - price
+ *               - image
+ *               - category
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Cà phê Arabica Đà Lạt
+ *               description:
+ *                 type: string
+ *                 example: Cà phê nguyên chất từ Đà Lạt
+ *               price:
+ *                 type: number
+ *                 example: 250000
+ *               original_price:
+ *                 type: number
+ *                 example: 300000
+ *               image:
+ *                 type: string
+ *                 example: /products/coffee.jpg
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               category:
+ *                 type: string
+ *                 example: coffee
+ *               stock_quantity:
+ *                 type: integer
+ *                 example: 100
+ *               origin:
+ *                 type: string
+ *                 example: Đà Lạt, Lâm Đồng
+ *               weight:
+ *                 type: string
+ *                 example: 500g
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               ingredients:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       201:
+ *         description: Product created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Missing required fields
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
 // Create product (admin only)
 router.post('/', async (req: Request, res: Response) => {
   try {

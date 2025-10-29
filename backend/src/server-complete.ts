@@ -6,6 +6,7 @@ import path from 'path';
 
 import config from './config/config';
 import database from './config/database';
+import { swaggerSpec, swaggerUi } from './config/swagger';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -52,6 +53,12 @@ app.get('/health', (req, res) => {
     environment: config.NODE_ENV,
   });
 });
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Lam Dong API Docs',
+}));
 
 // API routes
 app.get('/api/v1', (req, res) => {

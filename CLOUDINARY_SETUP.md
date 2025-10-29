@@ -78,4 +78,4 @@ https://console.cloudinary.com/console/media_library
 - **Transformations**: 25,000/tháng
 - **Request**: Unlimited
 
-Đủ cho hầu hết các dự án nhỏ và vừa!
+
