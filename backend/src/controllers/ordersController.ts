@@ -45,11 +45,10 @@ export class OrdersController {
       
       // Validate required fields
       if (!user_id || !items || !Array.isArray(items) || items.length === 0) {
-        const response: ApiResponse = {
-          status: 'error',
+        res.status(400).json({
+          success: false,
           message: 'Missing required fields: user_id, items'
-        };
-        res.status(400).json(response);
+        });
         return;
       }
 
@@ -125,8 +124,8 @@ export class OrdersController {
       // Fetch complete order with items
       const completeOrder = await OrdersController.getOrderWithItems(result.id);
 
-      const response: ApiResponse = {
-        status: 'success',
+      const response = {
+        success: true,
         message: 'Order created successfully',
         data: completeOrder
       };
@@ -134,11 +133,10 @@ export class OrdersController {
       res.status(201).json(response);
     } catch (error) {
       console.error('Create order error:', error);
-      const response: ApiResponse = {
-        status: 'error',
+      res.status(500).json({
+        success: false,
         message: error instanceof Error ? error.message : 'Failed to create order'
-      };
-      res.status(500).json(response);
+      });
     }
   }
 
@@ -203,25 +201,25 @@ export class OrdersController {
       const countResult = await database.query(countQuery, countParams);
       const total = parseInt(countResult.rows[0].count);
 
-      const response: ApiResponse = {
-        status: 'success',
+      const response = {
+        success: true,
         message: 'Orders retrieved successfully',
         data: result.rows,
-        meta: {
+        pagination: {
           total,
           page: pageNum,
-          limit: limitNum
+          limit: limitNum,
+          totalPages: Math.ceil(total / limitNum)
         }
       };
 
       res.json(response);
     } catch (error) {
       console.error('Get user orders error:', error);
-      const response: ApiResponse = {
-        status: 'error',
+      res.status(500).json({
+        success: false,
         message: 'Failed to retrieve orders'
-      };
-      res.status(500).json(response);
+      });
     }
   }
 
@@ -233,16 +231,15 @@ export class OrdersController {
       const order = await OrdersController.getOrderWithItems(id);
       
       if (!order) {
-        const response: ApiResponse = {
-          status: 'error',
+        res.status(404).json({
+          success: false,
           message: 'Order not found'
-        };
-        res.status(404).json(response);
+        });
         return;
       }
 
-      const response: ApiResponse = {
-        status: 'success',
+      const response = {
+        success: true,
         message: 'Order retrieved successfully',
         data: order
       };
@@ -250,11 +247,10 @@ export class OrdersController {
       res.json(response);
     } catch (error) {
       console.error('Get order error:', error);
-      const response: ApiResponse = {
-        status: 'error',
+      res.status(500).json({
+        success: false,
         message: 'Failed to retrieve order'
-      };
-      res.status(500).json(response);
+      });
     }
   }
 
@@ -266,11 +262,10 @@ export class OrdersController {
 
       const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
       if (!validStatuses.includes(status)) {
-        const response: ApiResponse = {
-          status: 'error',
+        res.status(400).json({
+          success: false,
           message: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
-        };
-        res.status(400).json(response);
+        });
         return;
       }
 
@@ -284,16 +279,15 @@ export class OrdersController {
       const result = await database.query(query, [status, id]);
 
       if (result.rows.length === 0) {
-        const response: ApiResponse = {
-          status: 'error',
+        res.status(404).json({
+          success: false,
           message: 'Order not found'
-        };
-        res.status(404).json(response);
+        });
         return;
       }
 
-      const response: ApiResponse = {
-        status: 'success',
+      const response = {
+        success: true,
         message: 'Order status updated successfully',
         data: result.rows[0]
       };
@@ -301,11 +295,10 @@ export class OrdersController {
       res.json(response);
     } catch (error) {
       console.error('Update order status error:', error);
-      const response: ApiResponse = {
-        status: 'error',
+      res.status(500).json({
+        success: false,
         message: 'Failed to update order status'
-      };
-      res.status(500).json(response);
+      });
     }
   }
 
@@ -387,25 +380,25 @@ export class OrdersController {
       const countResult = await database.query(countQuery, countParams);
       const total = parseInt(countResult.rows[0].count);
 
-      const response: ApiResponse = {
-        status: 'success',
+      const response = {
+        success: true,
         message: 'All orders retrieved successfully',
         data: result.rows,
-        meta: {
+        pagination: {
           total,
           page: pageNum,
-          limit: limitNum
+          limit: limitNum,
+          totalPages: Math.ceil(total / limitNum)
         }
       };
 
       res.json(response);
     } catch (error) {
       console.error('Get all orders error:', error);
-      const response: ApiResponse = {
-        status: 'error',
+      res.status(500).json({
+        success: false,
         message: 'Failed to retrieve orders'
-      };
-      res.status(500).json(response);
+      });
     }
   }
 
@@ -419,11 +412,10 @@ export class OrdersController {
       const orderResult = await database.query(orderQuery, [id]);
       
       if (orderResult.rows.length === 0) {
-        const response: ApiResponse = {
-          status: 'error',
+        res.status(404).json({
+          success: false,
           message: 'Order not found'
-        };
-        res.status(404).json(response);
+        });
         return;
       }
 
@@ -431,11 +423,10 @@ export class OrdersController {
       
       // Check if order can be cancelled (only pending orders)
       if (order.status !== 'pending') {
-        const response: ApiResponse = {
-          status: 'error',
+        res.status(400).json({
+          success: false,
           message: 'Only pending orders can be cancelled'
-        };
-        res.status(400).json(response);
+        });
         return;
       }
 
@@ -467,8 +458,8 @@ export class OrdersController {
         return updateResult.rows[0];
       });
 
-      const response: ApiResponse = {
-        status: 'success',
+      const response = {
+        success: true,
         message: 'Order cancelled successfully',
         data: result
       };
@@ -476,11 +467,10 @@ export class OrdersController {
       res.json(response);
     } catch (error) {
       console.error('Cancel order error:', error);
-      const response: ApiResponse = {
-        status: 'error',
+      res.status(500).json({
+        success: false,
         message: 'Failed to cancel order'
-      };
-      res.status(500).json(response);
+      });
     }
   }
 }

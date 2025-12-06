@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,12 +45,13 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <MainLayout>
+      <div className="container mx-auto px-4 py-8">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-primary mb-2">Contact Us</h1>
+        <h1 className="text-3xl font-bold text-primary mb-2">Liên hệ với chúng tôi</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Have questions about our Lâm Đồng specialties? We'd love to hear from you. Send us a message and we'll respond
-          as soon as possible.
+          Bạn có câu hỏi về các sản phẩm đặc sản Lâm Đồng? Chúng tôi rất vui được lắng nghe từ bạn. Gửi tin nhắn cho chúng tôi 
+          và chúng tôi sẽ phản hồi trong thời gian sớm nhất.
         </p>
       </div>
 
@@ -58,19 +60,19 @@ export default function ContactPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Get in Touch</CardTitle>
+              <CardTitle>Thông tin liên hệ</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-primary mt-1" />
                 <div>
-                  <h4 className="font-medium">Address</h4>
+                  <h4 className="font-medium">Địa chỉ</h4>
                   <p className="text-sm text-muted-foreground">
-                    123 Trần Hưng Đạo Street
+                    123 Trần Hưng Đạo
                     <br />
-                    Đà Lạt City, Lâm Đồng Province
+                    Thành phố Đà Lạt, Lâm Đồng
                     <br />
-                    Vietnam
+                    Việt Nam
                   </p>
                 </div>
               </div>
@@ -78,7 +80,7 @@ export default function ContactPage() {
               <div className="flex items-start gap-3">
                 <Phone className="w-5 h-5 text-primary mt-1" />
                 <div>
-                  <h4 className="font-medium">Phone</h4>
+                  <h4 className="font-medium">Điện thoại</h4>
                   <p className="text-sm text-muted-foreground">+84 263 123 4567</p>
                   <p className="text-sm text-muted-foreground">+84 901 234 567</p>
                 </div>
@@ -96,13 +98,13 @@ export default function ContactPage() {
               <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 text-primary mt-1" />
                 <div>
-                  <h4 className="font-medium">Business Hours</h4>
+                  <h4 className="font-medium">Giờ làm việc</h4>
                   <p className="text-sm text-muted-foreground">
-                    Monday - Friday: 8:00 AM - 6:00 PM
+                    Thứ 2 - Thứ 6: 8:00 - 18:00
                     <br />
-                    Saturday: 8:00 AM - 5:00 PM
+                    Thứ 7: 8:00 - 17:00
                     <br />
-                    Sunday: 9:00 AM - 4:00 PM
+                    Chủ nhật: 9:00 - 16:00
                   </p>
                 </div>
               </div>
@@ -111,15 +113,15 @@ export default function ContactPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Visit Our Store</CardTitle>
+              <CardTitle>Ghé thăm cửa hàng</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Come visit our physical store in the heart of Đà Lạt to experience our specialties firsthand and meet
-                our friendly team.
+                Hãy đến thăm cửa hàng của chúng tôi tại trung tâm Đà Lạt để trải nghiệm trực tiếp các sản phẩm đặc sản 
+                và gặp gỡ đội ngũ thân thiện của chúng tôi.
               </p>
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground">Map Location</p>
+                <p className="text-muted-foreground">Bản đồ</p>
               </div>
             </CardContent>
           </Card>
@@ -129,32 +131,32 @@ export default function ContactPage() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Send us a Message</CardTitle>
+              <CardTitle>Gửi tin nhắn cho chúng tôi</CardTitle>
             </CardHeader>
             <CardContent>
               {isSubmitted && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 font-medium">Thank you for your message!</p>
-                  <p className="text-green-700 text-sm">We'll get back to you within 24 hours.</p>
+                  <p className="text-green-800 font-medium">Cảm ơn bạn đã gửi tin nhắn!</p>
+                  <p className="text-green-700 text-sm">Chúng tôi sẽ phản hồi trong vòng 24 giờ.</p>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
+                    <Label htmlFor="name">Họ và tên *</Label>
                     <Input
                       id="name"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      placeholder="Enter your full name"
+                      placeholder="Nhập họ tên của bạn"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
+                    <Label htmlFor="email">Địa chỉ Email *</Label>
                     <Input
                       id="email"
                       name="email"
@@ -162,45 +164,45 @@ export default function ContactPage() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      placeholder="Enter your email"
+                      placeholder="Nhập email của bạn"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phone">Số điện thoại</Label>
                     <Input
                       id="phone"
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      placeholder="Enter your phone number"
+                      placeholder="Nhập số điện thoại"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="subject">Subject *</Label>
+                    <Label htmlFor="subject">Tiêu đề *</Label>
                     <Input
                       id="subject"
                       name="subject"
                       value={formData.subject}
                       onChange={handleChange}
                       required
-                      placeholder="What is this about?"
+                      placeholder="Bạn muốn hỏi về vấn đề gì?"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message *</Label>
+                  <Label htmlFor="message">Nội dung tin nhắn *</Label>
                   <Textarea
                     id="message"
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
                     required
-                    placeholder="Tell us more about your inquiry..."
+                    placeholder="Hãy cho chúng tôi biết thêm về yêu cầu của bạn..."
                     rows={6}
                   />
                 </div>
@@ -209,12 +211,12 @@ export default function ContactPage() {
                   {isSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Sending...
+                      Đang gửi...
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
-                      Send Message
+                      Gửi tin nhắn
                     </>
                   )}
                 </Button>
@@ -223,6 +225,7 @@ export default function ContactPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </MainLayout>
   )
 }

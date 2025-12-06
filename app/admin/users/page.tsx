@@ -59,6 +59,12 @@ export default function UsersPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   
+  // Delete inactive users state
+  const [deleteInactiveDialogOpen, setDeleteInactiveDialogOpen] = useState(false);
+  const [deleteInactiveLoading, setDeleteInactiveLoading] = useState(false);
+  const [deleteInactiveError, setDeleteInactiveError] = useState('');
+  const [inactiveUsersCount, setInactiveUsersCount] = useState(0);
+  
   // Success message
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -143,6 +149,14 @@ export default function UsersPage() {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Calculate inactive users count
+  useEffect(() => {
+    const inactive = users.filter(user => user.total_orders === 0 && user.role !== 'admin');
+    console.log('Inactive users:', inactive.length, inactive);
+    console.log('All users:', users.map(u => ({ name: u.name, orders: u.total_orders, role: u.role })));
+    setInactiveUsersCount(inactive.length);
+  }, [users]);
+
   // Open view dialog
   const openViewDialog = (user: UserData) => {
     setSelectedUser(user);
@@ -185,6 +199,36 @@ export default function UsersPage() {
       setDeleteError(error.message || 'Không thể xóa người dùng. Vui lòng thử lại.');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  // Handle delete inactive users
+  const handleDeleteInactiveUsers = async () => {
+    try {
+      setDeleteInactiveLoading(true);
+      setDeleteInactiveError('');
+
+      const result = await adminService.deleteInactiveUsers();
+
+      // Remove inactive users from list
+      const deletedIds = result.users.map(u => u.id.toString());
+      setUsers(users.filter((u) => !deletedIds.includes(u.id)));
+      setStats({
+        ...stats,
+        totalUsers: stats.totalUsers - result.deletedCount
+      });
+
+      // Show success message
+      setSuccessMessage(`Đã xóa ${result.deletedCount} người dùng không hoạt động thành công`);
+      setTimeout(() => setSuccessMessage(''), 5000);
+
+      // Close dialog
+      setDeleteInactiveDialogOpen(false);
+    } catch (error: any) {
+      console.error('Delete inactive users error:', error);
+      setDeleteInactiveError(error.message || 'Không thể xóa người dùng không hoạt động. Vui lòng thử lại.');
+    } finally {
+      setDeleteInactiveLoading(false);
     }
   };
 
@@ -334,9 +378,20 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold">Quản lý người dùng</h1>
           <p className="text-muted-foreground">Xem và quản lý thông tin người dùng</p>
         </div>
-        <Button onClick={fetchUsers}>
-          Làm mới
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={fetchUsers} variant="outline">
+            Làm mới
+          </Button>
+          {inactiveUsersCount > 0 && (
+            <Button 
+              onClick={() => setDeleteInactiveDialogOpen(true)}
+              variant="destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Xóa người dùng không hoạt động ({inactiveUsersCount})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Success Message */}
@@ -591,6 +646,49 @@ export default function UsersPage() {
                 </>
               ) : (
                 "Xóa người dùng"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Inactive Users Dialog */}
+      <AlertDialog open={deleteInactiveDialogOpen} onOpenChange={setDeleteInactiveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa người dùng không hoạt động</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa tất cả <strong>{inactiveUsersCount}</strong> người dùng không có đơn hàng nào?
+              <br />
+              <br />
+              <span className="text-destructive font-medium">
+                ⚠️ Hành động này không thể hoàn tác!
+              </span>
+              <br />
+              Tất cả người dùng không có đơn hàng (trừ admin) sẽ bị xóa vĩnh viễn khỏi hệ thống.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {deleteInactiveError && (
+            <Alert variant="destructive">
+              <AlertDescription>{deleteInactiveError}</AlertDescription>
+            </Alert>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteInactiveLoading}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteInactiveUsers}
+              disabled={deleteInactiveLoading}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleteInactiveLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xóa...
+                </>
+              ) : (
+                `Xóa ${inactiveUsersCount} người dùng`
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -7,6 +7,31 @@ const router = Router();
 /**
  * @swagger
  * /orders:
+ *   get:
+ *     summary: Orders API info
+ *     tags: [Orders]
+ *     responses:
+ *       200:
+ *         description: Orders API information
+ */
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Orders API',
+    endpoints: {
+      createOrder: 'POST /api/v1/orders (requires auth)',
+      getUserOrders: 'GET /api/v1/orders/user/:userId (requires auth)',
+      getOrderById: 'GET /api/v1/orders/:id (requires auth)',
+      updateOrderStatus: 'PUT /api/v1/orders/:id/status (requires admin)',
+      getAllOrders: 'GET /api/v1/orders/all (requires admin)',
+      cancelOrder: 'DELETE /api/v1/orders/:id (requires auth)',
+    }
+  });
+});
+
+/**
+ * @swagger
+ * /orders:
  *   post:
  *     summary: Create a new order
  *     tags: [Orders]

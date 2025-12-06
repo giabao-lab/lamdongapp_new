@@ -4,6 +4,8 @@ import { Inter, Playfair_Display } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth-context"
 import { CartProvider } from "@/lib/cart-context"
+import { OrdersProvider } from "@/lib/orders-context"
+import { Toaster } from "@/components/ui/sonner"
 
 // Optimize font loading with minimal weights and preload
 const inter = Inter({
@@ -44,7 +46,12 @@ export default function RootLayout({
     <html lang="vi" className={`${inter.variable} ${playfair.variable} antialiased`}>
       <body className="min-h-screen bg-background font-sans text-foreground">
         <AuthProvider>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>
+            <OrdersProvider>
+              {children}
+              <Toaster />
+            </OrdersProvider>
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

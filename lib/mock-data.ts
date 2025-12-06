@@ -152,3 +152,24 @@ export const mockAdmin: User = {
 }
 
 export const products = mockProducts
+
+// Mock revenue data by month (dữ liệu doanh thu theo tháng)
+// Tính từ các đơn hàng đã giao (delivered)
+export const mockRevenueByMonth = [
+  { month: "T1/2024", revenue: 15500000, orders: 35 },
+  { month: "T2/2024", revenue: 18200000, orders: 42 },
+  { month: "T3/2024", revenue: 21300000, orders: 48 },
+  { month: "T4/2024", revenue: 19800000, orders: 45 },
+  { month: "T5/2024", revenue: 23400000, orders: 52 },
+  { month: "T6/2024", revenue: 25600000, orders: 58 },
+  { month: "T7/2024", revenue: 22100000, orders: 50 },
+  { month: "T8/2024", revenue: 24800000, orders: 56 },
+  { month: "T9/2024", revenue: 26500000, orders: 60 },
+  { month: "T10/2024", revenue: 28900000, orders: 65 },
+  { month: "T11/2024", revenue: 31200000, orders: 70 },
+  { month: "T12/2024", revenue: 2500000, orders: 3 }, // 3 đơn hàng đã giao: ORD-001 (680k) + ORD-004 (920k) + ORD-005 (900k) = 2.5M
+]
+
+// Tổng doanh thu = tổng của tất cả các tháng
+export const totalRevenue = mockRevenueByMonth.reduce((sum, month) => sum + month.revenue, 0)
+

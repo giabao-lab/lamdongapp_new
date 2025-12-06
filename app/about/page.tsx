@@ -1,3 +1,4 @@
+import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Leaf, Award, Truck, Heart, Users, MapPin, Calendar, Star } from "lucide-react"
@@ -63,9 +64,10 @@ const timeline = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 bg-gradient-to-br from-primary/5 to-secondary/5">
+    <MainLayout>
+      <div className="min-h-screen">
+        {/* Hero Section */}
+        <section className="relative py-20 lg:py-32 bg-gradient-to-br from-primary/5 to-secondary/5">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
@@ -214,6 +216,7 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </MainLayout>
   )
 }

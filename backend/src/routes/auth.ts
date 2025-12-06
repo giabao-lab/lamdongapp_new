@@ -8,6 +8,30 @@ const router = Router();
 
 /**
  * @swagger
+ * /auth:
+ *   get:
+ *     summary: Auth API info
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: Authentication API information
+ */
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Authentication API',
+    endpoints: {
+      register: 'POST /api/v1/auth/register',
+      login: 'POST /api/v1/auth/login',
+      profile: 'GET /api/v1/auth/profile (requires auth)',
+      updateProfile: 'PUT /api/v1/auth/profile (requires auth)',
+      users: 'GET /api/v1/auth/users (requires auth)',
+    }
+  });
+});
+
+/**
+ * @swagger
  * /auth/register:
  *   post:
  *     summary: Register a new user
@@ -241,13 +265,20 @@ router.put('/profile', [
     .isLength({ min: 2 })
     .withMessage('Name must be at least 2 characters long'),
   body('phone')
-    .optional()
-    .isMobilePhone('vi-VN')
-    .withMessage('Please provide a valid Vietnamese phone number'),
+    .optional({ checkFalsy: true }) // Allow empty string
+    .custom((value) => {
+      if (!value || value.trim() === '') return true; // Empty is OK
+      // Vietnamese phone: starts with 0, 10-11 digits
+      return /^0\d{9,10}$/.test(value);
+    })
+    .withMessage('Please provide a valid Vietnamese phone number (e.g., 0901234567)'),
   body('address')
-    .optional()
+    .optional({ checkFalsy: true }) // Allow empty string
     .trim()
-    .isLength({ min: 5 })
+    .custom((value) => {
+      if (!value || value.trim() === '') return true; // Empty is OK
+      return value.length >= 5;
+    })
     .withMessage('Address must be at least 5 characters long'),
   handleValidationErrors
 ], AuthController.updateProfile);
@@ -285,6 +316,46 @@ router.put('/profile', [
  */
 // Get all users route (admin only)
 router.get('/users', authenticate, AuthController.getAllUsers);
+
+/**
+ * @swagger
+ * /auth/users/inactive:
+ *   delete:
+ *     summary: Delete all inactive users (Admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Inactive users deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Deleted 5 inactive users successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletedCount:
+ *                       type: integer
+ *                       example: 5
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+// Delete inactive users route (admin only) - MUST come before /users/:id
+router.delete('/users/inactive', authenticate, AuthController.deleteInactiveUsers);
 
 /**
  * @swagger

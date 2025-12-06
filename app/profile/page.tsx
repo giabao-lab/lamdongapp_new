@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
+import { ordersService } from "@/lib/orders-service"
+import type { Order } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,37 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { Loading } from "@/components/ui/loading"
 import { User, Package, MapPin, Phone, Mail, Edit } from "lucide-react"
-
-const mockOrders = [
-  {
-    id: "ORD-001",
-    customerInfo: { email: "admin@example.com" },
-    status: "delivered",
-    createdAt: "2024-01-15T10:30:00Z",
-    total: 450000,
-    items: [
-      { name: "Cà phê Arabica Đà Lạt", quantity: 2, price: 180000 },
-      { name: "Trà atiso Đà Lạt", quantity: 1, price: 90000 },
-    ],
-  },
-  {
-    id: "ORD-002",
-    customerInfo: { email: "admin@example.com" },
-    status: "processing",
-    createdAt: "2024-01-20T14:15:00Z",
-    total: 320000,
-    items: [{ name: "Rượu vang Đà Lạt", quantity: 1, price: 320000 }],
-  },
-  {
-    id: "ORD-003",
-    customerInfo: { email: "customer@example.com" },
-    status: "shipped",
-    createdAt: "2024-01-18T09:45:00Z",
-    total: 280000,
-    items: [{ name: "Dâu tây Đà Lạt", quantity: 2, price: 140000 }],
-  },
-]
 
 export default function ProfilePage() {
   const { state, updateProfile } = useAuth()
@@ -52,6 +25,11 @@ export default function ProfilePage() {
     phone: state.user?.phone || "",
     address: state.user?.address || "",
   })
+  
+  // Orders state
+  const [userOrders, setUserOrders] = useState<Order[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(true)
+  const [ordersError, setOrdersError] = useState<string | null>(null)
 
   // Sync formData with user data when user changes
   useEffect(() => {
@@ -64,6 +42,36 @@ export default function ProfilePage() {
       })
     }
   }, [state.user])
+  
+  // Fetch user orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!state.user?.id) {
+        console.log('No user ID found')
+        setOrdersLoading(false)
+        return
+      }
+      
+      try {
+        console.log('Fetching orders for user:', state.user.id)
+        setOrdersLoading(true)
+        setOrdersError(null)
+        const response = await ordersService.getUserOrders(state.user.id)
+        console.log('Orders response:', response)
+        console.log('Orders data:', response.orders)
+        console.log('Orders count:', response.orders?.length || 0)
+        setUserOrders(response.orders || [])
+      } catch (error) {
+        console.error('Failed to fetch orders:', error)
+        setOrdersError('Không thể tải lịch sử đơn hàng')
+        setUserOrders([])
+      } finally {
+        setOrdersLoading(false)
+      }
+    }
+    
+    fetchOrders()
+  }, [state.user?.id])
 
   const handleSave = async () => {
     setIsLoading(true)
@@ -88,8 +96,6 @@ export default function ProfilePage() {
       setIsLoading(false)
     }
   }
-
-  const userOrders = mockOrders?.filter((order) => order.customerInfo.email === state.user?.email) || []
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -256,7 +262,30 @@ export default function ProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {userOrders.length === 0 ? (
+                {ordersLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loading size="lg" />
+                  </div>
+                ) : ordersError ? (
+                  <div className="text-center py-8">
+                    <Package className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                    <p className="text-red-600 mb-2">{ordersError}</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setOrdersError(null)
+                        if (state.user?.id) {
+                          ordersService.getUserOrders(state.user.id)
+                            .then(res => setUserOrders(res.orders))
+                            .catch(() => setOrdersError('Không thể tải lịch sử đơn hàng'))
+                        }
+                      }}
+                    >
+                      Thử lại
+                    </Button>
+                  </div>
+                ) : userOrders.length === 0 ? (
                   <div className="text-center py-8">
                     <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">Chưa có đơn hàng nào</p>
@@ -270,7 +299,7 @@ export default function ProfilePage() {
                           <div>
                             <h4 className="font-medium">Đơn hàng #{order.id}</h4>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleDateString("vi-VN", {
+                              {new Date(order.created_at).toLocaleDateString("vi-VN", {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
@@ -281,14 +310,18 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-2 mb-3">
-                          {order.items.map((item, index) => (
-                            <div key={index} className="flex justify-between text-sm">
-                              <span>
-                                {item.name} x {item.quantity}
-                              </span>
-                              <span>{(item.price * item.quantity).toLocaleString("vi-VN")}₫</span>
-                            </div>
-                          ))}
+                          {order.items && order.items.length > 0 ? (
+                            order.items.map((item, index) => (
+                              <div key={index} className="flex justify-between text-sm">
+                                <span>
+                                  {item.product?.name || 'Sản phẩm'} x {item.quantity}
+                                </span>
+                                <span>{(item.price * item.quantity).toLocaleString("vi-VN")}₫</span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Không có thông tin sản phẩm</p>
+                          )}
                         </div>
 
                         <div className="flex justify-between items-center pt-3 border-t">

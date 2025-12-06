@@ -44,6 +44,14 @@ class AdminService {
   async deleteUser(userId: number): Promise<void> {
     await apiClient.delete(`/auth/users/${userId}`)
   }
+
+  async deleteInactiveUsers(): Promise<{ deletedCount: number; users: UserData[] }> {
+    const response = await apiClient.delete<{ deletedCount: number; users: UserData[] }>("/auth/users/inactive")
+    if (!response.data) {
+      throw new Error("No data returned from API")
+    }
+    return response.data
+  }
 }
 
 export const adminService = new AdminService()

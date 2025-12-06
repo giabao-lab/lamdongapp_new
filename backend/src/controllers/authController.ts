@@ -363,4 +363,71 @@ export class AuthController {
       } as ApiResponse<null>);
     }
   }
+
+  // Delete inactive users (users with no orders)
+  static async deleteInactiveUsers(req: Request & { user?: any }, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        } as ApiResponse<null>);
+        return;
+      }
+
+      // Check if user has admin role
+      if (req.user.role !== 'admin') {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied. Admin role required.'
+        } as ApiResponse<null>);
+        return;
+      }
+
+      // Get all inactive users (no orders and not admin)
+      const inactiveUsersResult = await database.query(
+        `SELECT id, email, name, phone, address, role, created_at
+         FROM users 
+         WHERE id NOT IN (SELECT DISTINCT user_id FROM orders WHERE user_id IS NOT NULL)
+         AND role != 'admin'`
+      );
+
+      const inactiveUsers = inactiveUsersResult.rows;
+      
+      if (inactiveUsers.length === 0) {
+        res.json({
+          success: true,
+          message: 'Không có người dùng không hoạt động nào để xóa',
+          data: {
+            deletedCount: 0,
+            users: []
+          }
+        } as ApiResponse<any>);
+        return;
+      }
+
+      // Delete inactive users
+      const userIds = inactiveUsers.map((user: any) => user.id);
+      await database.query(
+        'DELETE FROM users WHERE id = ANY($1)',
+        [userIds]
+      );
+
+      res.json({
+        success: true,
+        message: `Đã xóa ${inactiveUsers.length} người dùng không hoạt động thành công`,
+        data: {
+          deletedCount: inactiveUsers.length,
+          users: inactiveUsers
+        }
+      } as ApiResponse<any>);
+
+    } catch (error) {
+      console.error('Delete inactive users error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      } as ApiResponse<null>);
+    }
+  }
 }
